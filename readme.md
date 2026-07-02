@@ -42,7 +42,7 @@ Added UART receive support from PC to STM32.
 
 Command buffering implemented so characters are stored until Enter is pressed. 
 
-Confirmed commands can be sent through PuTTY and processed by HandleCommands().
+Confirmed commands can be sent through PuTTY and processed by 'HandleCommands()'.
 
 Verified LEDS update based on UART commands.
 
