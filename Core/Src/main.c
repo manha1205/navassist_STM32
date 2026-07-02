@@ -18,8 +18,9 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "string.h"
-#include "stdlib.h"
+#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -42,9 +43,12 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-UART_HandleTypeDef huart2;
-
 /* USER CODE BEGIN PV */
+UART_HandleTypeDef huart2;
+char rx_data[2500];
+int rxindex = 0;
+bool ready = false;
+uint8_t rx_char;
 
 /* USER CODE END PV */
 
@@ -64,7 +68,7 @@ void RGB_OFF(void){
 	 HAL_Delay(500);
 }
 void RGB_RED(void){
-	 HAL_GPIO_WritePin(GPIOC, GPIO_PIN_1, GPIO_PIN_SET );
+	 HAL_GPIO_WritePin(GPIOC, GPIO_PIN_1, GPIO_PIN_SET);
 }
 void RGB_GREEN(void){
 	 RGB_OFF();
@@ -91,13 +95,12 @@ void RIGHT_DIRECTION(void){
 }
 void STRAIGHT_DIRECTION(void){
 	Direction_Off();
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, 1);
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, 1);
 
 }
 
 
-char command[]= "RIGHT,10,Turn Left in 300 ft";
 
 typedef enum{
 	STATUS_GREEN,
@@ -112,6 +115,9 @@ void SetStatus(int distance){
 	}
 	else if (distance< 20 && distance > 0){
 		CurrentStatus = STATUS_YELLOW;
+	}
+	else if (distance == 0){
+		CurrentStatus = STATUS_RED;
 	}
 }
 
@@ -190,17 +196,28 @@ int main(void)
   MX_GPIO_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-  HandleCommands(command);
+ HAL_UART_Receive_IT(&huart2, &rx_char, 1); //retreive computer side text
+
+
   /* USER CODE END 2 */
+
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-
   while (1)
   {
     /* USER CODE END WHILE */
+
     /* USER CODE BEGIN 3 */
-	  UpdateStatusLight();
-	  HAL_Delay(200);
+	  if(ready){
+		  HandleCommands(rx_data);
+		  UpdateStatusLight();
+		    ready = false;
+
+	  }
+//
+//	  HAL_Delay(200);
+
+
   }
   /* USER CODE END 3 */
 }
@@ -351,6 +368,25 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart2){
+	if(rx_char == '\r'|| rx_char == '\n'){
+		rx_data[rxindex]= '\0';
+		ready = true;
+		 HAL_UART_Transmit(huart2, (uint8_t *) rx_data, strlen(rx_data), HAL_MAX_DELAY);
+		 HAL_UART_Transmit(huart2, (uint8_t *)"\r\n", 2, HAL_MAX_DELAY);
+
+		 rxindex = 0;
+
+	}
+	else{
+		rx_data[rxindex] = rx_char;
+		rxindex++;
+	}
+	HAL_UART_Receive_IT(huart2, &rx_char, 1);
+
+}
+
+
 
 /* USER CODE END 4 */
 
